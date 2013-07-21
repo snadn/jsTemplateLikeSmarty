@@ -10,21 +10,26 @@ var StringH = {
 		return StringH.encode4Html(s).replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 	}
 };
-window.foreach = function(arr, callback, pThis) {
-	for (var i = 0, len = arr.length; i < len; i++) {
-		if (i in arr) {
-			callback.call(pThis, arr[i], i, arr);
+var smarty= {
+	foreach : function(arr, callback, pThis) {
+		for (var i = 0, len = arr.length; i < len; i++) {
+			if (i in arr) {
+				callback.call(pThis, arr[i], i, arr);
+			}
 		}
+	},
+	empty : function(a){ return !a; }
+}
+
+String.prototype.smarty = {
+	getDefault : function(a){ return this.toString() || a; },
+	escape : function(a){
+		if (a.toLowerCase() == 'html') {
+			return StringH.encode4HtmlValue(this.toString());
+		}
+		return this.toString();
 	}
-};
-window.empty = function(a){ return !a; };
-String.prototype.getDefault = function(a){ return this.toString() || a; };
-String.prototype.escape = function(a){
-	if (a.toLowerCase() == 'html') {
-		return StringH.encode4HtmlValue(this.toString());
-	}
-	return this.toString();
-};
+}
 
 var Tmpl = (function() {
 	/*
@@ -73,7 +78,7 @@ var Tmpl = (function() {
 			tagG: 'foreach',
 			isBgn: 1,
 			rlt: 1,
-			sBgn: '");foreach(', // 修改
+			sBgn: '");smarty.foreach(', // 修改
 			trans: function(e){
 				return e.replace(/as\s*([$\w]+)/, function($a, $b){
 					return ',function(' + $b + ',' + $b + '_index' + ',' + $b + '_arr';
@@ -148,8 +153,8 @@ var Tmpl = (function() {
 		
 		// 修改新增标签转换方法
 		var ss3 = [
-			[/\|\s*default\s*:\s*([^\s|]*)/, function(a,b){ return '.getDefault(' + b + ')'; }],
-			[/\|\s*escape\s*:\s*([^\s|]*)/, function(a,b){ return '.escape(' + b + ')'; }],
+			[/\|\s*default\s*:\s*([^\s|]*)/, function(a,b){ return '.smarty.getDefault(' + b + ')'; }],
+			[/\|\s*escape\s*:\s*([^\s|]*)/, function(a,b){ return '.smarty.escape(' + b + ')'; }],
 			[/([$\w]+)@first/, function(a,b){ return '(' + b + '_index == 0)'; }],
 			[/([$\w]+)@last/, function(a,b){ return '(' + b + '_index == ' + b + '.length - 1)'; }],
 			[/([$\w]+)@index/, function(a,b){ return '(' + b + '_index)'; }]
