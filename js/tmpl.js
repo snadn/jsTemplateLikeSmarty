@@ -10,7 +10,7 @@ var StringH = {
 		return StringH.encode4Html(s).replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 	}
 };
-var smarty= {
+window.smarty = {
 	foreach : function(arr, callback, pThis) {
 		for (var i = 0, len = arr.length; i < len; i++) {
 			if (i in arr) {
@@ -19,17 +19,14 @@ var smarty= {
 		}
 	},
 	empty : function(a){ return !a; }
-}
-
-String.prototype.smarty = {
-	getDefault : function(a){ return this.toString() || a; },
-	escape : function(a){
-		if (a.toLowerCase() == 'html') {
-			return StringH.encode4HtmlValue(this.toString());
-		}
-		return this.toString();
+};
+String.prototype.getDefault = function(a){ return this.toString() || a; };
+String.prototype.escape = function(a){
+	if (a.toLowerCase() == 'html') {
+		return StringH.encode4HtmlValue(this.toString());
 	}
-}
+	return this.toString();
+};
 
 var Tmpl = (function() {
 	/*
@@ -153,8 +150,9 @@ var Tmpl = (function() {
 		
 		// 修改新增标签转换方法
 		var ss3 = [
-			[/\|\s*default\s*:\s*([^\s|]*)/, function(a,b){ return '.smarty.getDefault(' + b + ')'; }],
-			[/\|\s*escape\s*:\s*([^\s|]*)/, function(a,b){ return '.smarty.escape(' + b + ')'; }],
+			[/\|\s*default\s*:\s*([^\s|]*)/, function(a,b){ return '.getDefault(' + b + ')'; }],
+			[/\|\s*escape\s*:\s*([^\s|]*)/, function(a,b){ return '.escape(' + b + ')'; }],
+			[/\s*empty\(/, function(a,b){ return 'smarty.empty('; }],
 			[/([$\w]+)@first/, function(a,b){ return '(' + b + '_index == 0)'; }],
 			[/([$\w]+)@last/, function(a,b){ return '(' + b + '_index == ' + b + '.length - 1)'; }],
 			[/([$\w]+)@index/, function(a,b){ return '(' + b + '_index)'; }]
