@@ -10,15 +10,51 @@ var StringH = {
 		return StringH.encode4Html(s).replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 	}
 };
+function isArraylike( obj ) {
+	var length = obj.length;
+
+	if ( obj === window ) {
+		return false;
+	}
+
+	if ( obj.nodeType === 1 && length ) {
+		return true;
+	}
+
+	return obj instanceof Array || typeof obj !== "function" &&
+		( length === 0 ||
+		typeof length === "number" && length > 0 && ( length - 1 ) in obj );
+}
 window.smarty = {
-	foreach : function(arr, callback, pThis) {
-		for (var i = 0, len = arr.length; i < len; i++) {
-			if (i in arr) {
-				callback.call(pThis, arr[i], i, arr);
+	foreach : function( obj, callback ) {
+		var value,
+			k,
+			i = 0,
+			length = obj.length,
+			isArray = isArraylike( obj );
+
+		if ( isArray ) {
+			for ( ; i < length; i++ ) {
+				value = callback.call( obj[ i ], obj[ i ], i, i, obj );
+
+				if ( value === false ) {
+					break;
+				}
+			}
+		} else {
+			for ( k in obj ) {
+				value = callback.call( obj[ k ], obj[ k ], k, i++, obj );
+
+				if ( value === false ) {
+					break;
+				}
 			}
 		}
+
+		return obj;
 	},
-	empty : function(a){ return !a; }
+	empty : function(a){ return !a || a == false; },
+	count : function(a){ return a.length; }
 };
 String.prototype.getDefault = function(a){ return this.toString() || a; };
 String.prototype.escape = function(a){
@@ -78,7 +114,7 @@ var Tmpl = (function() {
 			sBgn: '");smarty.foreach(', // 修改
 			trans: function(e){
 				return e.replace(/as\s*([$\w]+)/, function($a, $b){
-					return ',function(' + $b + ',' + $b + '_index' + ',' + $b + '_arr';
+					return ',function(' + $b + ',' + $b + '_key' + ',' + $b + '_index' + ',' + $b + '_arr';
 				}); // 修改新增
 			},
 			sEnd: '){' + sLeft // 修改
@@ -153,9 +189,12 @@ var Tmpl = (function() {
 			[/\|\s*default\s*:\s*([^\s|]*)/, function(a,b){ return '.getDefault(' + b + ')'; }],
 			[/\|\s*escape\s*:\s*([^\s|]*)/, function(a,b){ return '.escape(' + b + ')'; }],
 			[/\s*empty\(/, function(a,b){ return 'smarty.empty('; }],
+			[/\s*count\(/, function(a,b){ return 'smarty.count('; }],
 			[/([$\w]+)@first/, function(a,b){ return '(' + b + '_index == 0)'; }],
 			[/([$\w]+)@last/, function(a,b){ return '(' + b + '_index == ' + b + '.length - 1)'; }],
-			[/([$\w]+)@index/, function(a,b){ return '(' + b + '_index)'; }]
+			[/([$\w]+)@index/, function(a,b){ return '(' + b + '_index)'; }],
+			[/([$\w]+)@key/, function(a,b){ return '(' + b + '_key)'; }],
+			[/^\$\w+\s*=.*$/, function(a,b){ return a + ',""'; }]
 		];
 		for (var i = 0; i < ss.length; i++) {
 			sTmpl = sTmpl.replace(ss[i][0], ss[i][1]);
